@@ -1,66 +1,66 @@
-from pyparsing import (
-    Word, alphas, nums, oneOf, Forward, Group, ZeroOrMore, infixNotation, opAssoc
-)
-import operator
-
-# Definir operadores
-expr_stack = []
-
-def push_first(tokens):
-    expr_stack.append(tokens[0])
-
-def parse_expression(expr):
-    expr_stack.clear()
-
-    # Definir gramática
-    operand = Word(alphas, exact=1) | Word(nums)
-    operator = oneOf("+ - * / ^")
-    expr = Forward()
-    atom = operand | Group('(' + expr + ')')
-    term = infixNotation(atom, [
-        (oneOf("^"), 2, opAssoc.RIGHT, push_first),
-        (oneOf("* /"), 2, opAssoc.LEFT, push_first),
-        (oneOf("+ -"), 2, opAssoc.LEFT, push_first),
-    ])
-    expr <<= term
-
-    parsed_expr = expr.parseString(expr, parseAll=True)
-    return parsed_expr
-
-# Generar el árbol de expresión
 class Node:
     def __init__(self, value):
         self.value = value
         self.left = None
         self.right = None
 
-def build_expression_tree():
-    token = expr_stack.pop(0)
-    node = Node(token)
+def get_precedence(op):
+    precedences = {'+': 1, '-': 1, '*': 2, '/': 2, '^': 3}
+    return precedences.get(op, 0)
+
+def construct_expression_tree(expression):
+    def apply_operator(operators, values):
+        operator = operators.pop()
+        right = values.pop()
+        left = values.pop()
+        node = Node(operator)
+        node.left = left
+        node.right = right
+        values.append(node)
     
-    if token in "+-*/^":
-        node.left = build_expression_tree()
-        node.right = build_expression_tree()
+    operators = []
+    values = []
+    i = 0
+    while i < len(expression):
+        if expression[i] == ' ':
+            i += 1
+            continue
+        
+        if expression[i] == '(':
+            operators.append(expression[i])
+        elif expression[i].isdigit():
+            num = []
+            while i < len(expression) and expression[i].isdigit():
+                num.append(expression[i])
+                i += 1
+            values.append(Node(''.join(num)))
+            continue
+        elif expression[i] == ')':
+            while operators and operators[-1] != '(':
+                apply_operator(operators, values)
+            operators.pop()
+        else:
+            while (operators and operators[-1] != '(' and
+                   get_precedence(operators[-1]) >= get_precedence(expression[i])):
+                apply_operator(operators, values)
+            operators.append(expression[i])
+        
+        i += 1
+    
+    while operators:
+        apply_operator(operators, values)
+    
+    return values[0]
 
-    return node
-
-# Función para imprimir el árbol de expresión
-def print_expression_tree(node, level=0):
+def inorder_traversal(node):
     if node is not None:
-        print_expression_tree(node.right, level + 1)
-        print(' ' * 4 * level + '->', node.value)
-        print_expression_tree(node.left, level + 1)
+        inorder_traversal(node.left)
+        print(node.value, end=' ')
+        inorder_traversal(node.right)
 
-# Ejemplo de expresiones
-expressions = [
-    "5*4/5+3/2*6-5",
-    "(a+b*c)+((d*e+h)*g)"
-]
+# Ejemplo de uso
+expression = "51*42/56+38/23*62-56*94"
+root = construct_expression_tree(expression)
 
-# Parsear y construir el árbol para cada expresión
-for expr in expressions:
-    print(f"\nExpresión: {expr}")
-    parse_expression(expr)
-    tree = build_expression_tree()
-    print("Árbol de expresión:")
-    print_expression_tree(tree)
+# Mostrar el árbol en orden
+inorder_traversal(root)
