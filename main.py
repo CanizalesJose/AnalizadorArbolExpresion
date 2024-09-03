@@ -1,39 +1,77 @@
 import networkx as nx
 import matplotlib.pyplot as plt
 import re
-# Peso de operadores
-# ^ Derecha - Izquierda
-# / * Izquierda - Derecha
-# - + Izquierda - Derecha
 
-def leerExpresion(expresion):
-    expresion = expresion.replace(" ", "")
-    regex = r'(\d+|[a-zA-Z][a-zA-Z0-9]*)([\-\+\/\*\^](\d+|[a-zA-Z][a-zA-Z0-9]*))*'
-    if not re.fullmatch(regex, expresion):
-        raise ValueError('La expresión no coincide')
-    print(f'Se analiza la expresión {expresion}')
-    operando = ''
-    operandos = []
-    operadores = []
-    grafo = nx.Graph()
-    for elemento in expresion:
-        if elemento not in ['-', '+', '/', '*', '^']:
-            operando += elemento
+class Node:
+    def __init__(self, value):
+        self.value = value
+        self.left = None
+        self.right = None
+
+def get_precedence(op):
+    precedences = {'-': 1, '+': 1, '/': 2, '*': 2, '^': 3}
+    return precedences.get(op, 0)
+
+def construct_expression_tree(expression):
+    def apply_operator(operators, values):
+        operator = operators.pop()
+        right = values.pop()
+        left = values.pop()
+        node = Node(operator)
+        node.left = left
+        node.right = right
+        values.append(node)
+    
+    operators = []
+    values = []
+    i = 0
+    while i < len(expression):
+        if expression[i] == ' ':
+            i += 1
+            continue
+        
+        if expression[i] == '(':
+            operators.append(expression[i])
+        elif expression[i].isdigit():
+            num = []
+            while i < len(expression) and expression[i].isdigit():
+                num.append(expression[i])
+                i += 1
+            values.append(Node(''.join(num)))
+            continue
+        elif expression[i] == ')':
+            while operators and operators[-1] != '(':
+                apply_operator(operators, values)
+            operators.pop()
         else:
-            operandos.append(operando)
-            grafo.add_node(operando)
+            while (operators and operators[-1] != '(' and
+                   get_precedence(operators[-1]) >= get_precedence(expression[i])):
+                apply_operator(operators, values)
+            operators.append(expression[i])
+        
+        i += 1
+    
+    while operators:
+        apply_operator(operators, values)
+    
+    return values[0]
 
-            operando = ''
-        if elemento in ['-', '+', '/', '*', '^']:
-            operadores.append(elemento)
-            grafo.add_node(elemento)
-    print(operandos)
-    print(operadores)
-    return grafo
 
+def print_tree(node, indent="", last='updown'):
+    if node is not None:
+        # Recursivamente imprime el subárbol derecho
+        print_tree(node.right, indent + "     ", 'up')
+        
+        # Imprime el valor del nodo con formato gráfico
+        updown = '┌── ' if last == 'up' else '└── ' if last == 'down' else '─── '
+        print(indent + updown + str(node.value))
+        
+        # Recursivamente imprime el subárbol izquierdo
+        print_tree(node.left, indent + "     ", 'down')
 
-testExpression = '51*42/56+38/23*62-56*94'
+# Ejemplo de uso
+expression = "(1+2*3)+((4*5+6)*7)"
+root = construct_expression_tree(expression)
 
-plt.figure(figsize=(12, 6))
-nx.draw(leerExpresion(testExpression), with_labels=True)
-plt.show()
+# Mostrar el árbol en orden
+print_tree(root)
