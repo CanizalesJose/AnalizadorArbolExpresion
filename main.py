@@ -70,7 +70,8 @@ def print_tree(node, indent="", last='updown'):
         print_tree(node.left, indent + "     ", 'down')
 
 # Ejemplo de uso
-expression = "(1+2*3)+((4*5+6)*7)"
+# expression = "(1+2*3)+((4*5+6)*7)"
+expression = input('Ingresar una expresión infija: ')
 root = construct_expression_tree(expression)
 
 # Mostrar el árbol en orden
