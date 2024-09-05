@@ -1,7 +1,3 @@
-import networkx as nx
-import matplotlib.pyplot as plt
-import re
-
 class Node:
     def __init__(self, value):
         self.value = value
