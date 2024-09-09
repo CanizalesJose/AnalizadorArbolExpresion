@@ -10,8 +10,8 @@ Se hace uso de la librería `NetworkX` para generar un grafo y poder mostrarlo u
 Para lograrlo se hace uso de dos funciones, una para construir el grafo (`buildGraph`) y otra para calcular la jerarquía de posiciones (`hierarchy_pos`).
 ***
 En la función principal se pide por consola una expresión que puede contener números o variables, además de parentesis, por ejemplo:
-- $(a+b*c)+((d*e+f)*g)$
-- $5*4+3*2-1$
+- `(a+b*c)+((d*e+f)*g)`
+- `5*4+3*2-1`
 
 ### Requisitos
 Para ejecutar el programa se debe tener instalado:
