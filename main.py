@@ -1,84 +1,91 @@
 import networkx as nx
 import matplotlib.pyplot as plt
+
+# Crear clase para estructurar el árbol
 class Node:
     def __init__(self, value):
+        # Cada nodo tiene un valor y otro nodo a la izquierda y derecha
         self.value = value
         self.left = None
         self.right = None
 
+# Función para comprobar el peso de un operador
 def get_precedence(op):
     precedences = {'-': 1, '+': 1, '/': 2, '*': 2, '^': 3}
-    return precedences.get(op, 0)
+    return precedences.get(op)
 
+# Función para comprobar si un valor es variable o número
+def is_variable_or_number(char):
+    return char.isdigit() or char.isalpha()
+
+# Función que construye el árbol
 def construct_expression_tree(expression):
+    # Función interna para usar solo dentro de esta operación
     def apply_operator(operators, values):
+        # Saca un operador de la lista de operadores
         operator = operators.pop()
+        # Saca dos operandos de la lista de operandos
         right = values.pop()
         left = values.pop()
+        # Crea una rama con el operador como raíz
         node = Node(operator)
         node.left = left
         node.right = right
+        # Se agrega a la lista de operandos, reemplazando a los dos valores usados
         values.append(node)
     
+    # Se crean las listas de operadores y operandos, así como el conteo para el ciclo
     operators = []
     values = []
     i = 0
+    # Recorre cada elemento de la expresión, ignorando los espacios
     while i < len(expression):
         if expression[i] == ' ':
             i += 1
             continue
-        
+        # Si encuentra un parentesis inicia la evaluación de una subexpresión
         if expression[i] == '(':
             operators.append(expression[i])
-        elif expression[i].isdigit():
-            num = []
-            while i < len(expression) and expression[i].isdigit():
-                num.append(expression[i])
+        elif is_variable_or_number(expression[i]):
+            # Si encuentra un operando lo agrega a una lista interna
+            token = []
+            while i < len(expression) and is_variable_or_number(expression[i]):
+                token.append(expression[i])
                 i += 1
-            values.append(Node(''.join(num)))
+            values.append(Node(''.join(token)))
             continue
+        # Al cerrar el parentesis y la subexpresión se comienzan a evaluar los operadores usando la función interna
         elif expression[i] == ')':
             while operators and operators[-1] != '(':
                 apply_operator(operators, values)
             operators.pop()
+        # Si encuentra un operador se comprueba la precedencia comparandolo con los operadores anteriores
         else:
-            while (operators and operators[-1] != '(' and
-                   get_precedence(operators[-1]) >= get_precedence(expression[i])):
+            while (operators and operators[-1] != '(' and get_precedence(operators[-1]) >= get_precedence(expression[i])):
                 apply_operator(operators, values)
             operators.append(expression[i])
         
         i += 1
-    
+    # Después de recorrer la expresión, se aplican los operadores restantes
     while operators:
         apply_operator(operators, values)
     
+    # En la lista, el último valor será la raíz, por lo que se regresa y a partir de ella se puede recorrer el árbol entero
     return values[0]
 
-
-def print_tree(node, indent="", last='updown'):
-    if node is not None:
-        # Recursivamente imprime el subárbol derecho
-        print_tree(node.right, indent + "     ", 'up')
-        
-        # Imprime el valor del nodo con formato gráfico
-        updown = '┌── ' if last == 'up' else '└── ' if last == 'down' else '─── '
-        print(indent + updown + str(node.value))
-        
-        # Recursivamente imprime el subárbol izquierdo
-        print_tree(node.left, indent + "     ", 'down')
-
+# Función para construir un grafo usando NetworkX
 def buildGraph(graph, node, node_id_map):
     if node is not None:
-        # Se crea un identificador para cada nodo y evitar que se repita
+        # Se crea un identificador para cada nodo y evitar que se tome como repetido
         node_id = id(node)
         node_id_map[node_id] = node.value
-        # Si hay un nodo izquierdo, agregamos el borde y seguimos recursivamente
+        # Si hay un nodo izquierdo, se agrega una conexión y se continúa recursivamente
         if node.left is not None:
             left_id = id(node.left)
             graph.add_edge(node_id, left_id)
             buildGraph(graph, node.left, node_id_map)
         
-        # Si hay un nodo derecho, agregamos el borde y seguimos recursivamente
+        # Si hay un nodo derecho, se agrega una conexión y se continúa recursivamente
         if node.right is not None:
             right_id = id(node.right)
             graph.add_edge(node_id, right_id)
@@ -90,11 +97,10 @@ def hierarchy_pos(graph, root, width=1., vert_gap=0.2, vert_loc=0, xcenter=0.5, 
     if parsed is None:
         parsed = set()
         
-    # Asegurarse de que el nodo raíz no ha sido procesado antes
     if root not in parsed:
         parsed.add(root)
         neighbors = list(graph.neighbors(root))
-        if parent is not None:  # eliminar al nodo padre de la lista de vecinos
+        if parent is not None:
             neighbors.remove(parent)
         if len(neighbors) != 0:
             dx = width / 2
@@ -105,18 +111,19 @@ def hierarchy_pos(graph, root, width=1., vert_gap=0.2, vert_loc=0, xcenter=0.5, 
         pos[root] = (xcenter, vert_loc)
     return pos
 
-# Ejemplo de uso
-# expression = "(1+2*3)+((4*5+6)*7)"
-expression = input('Ingresar una expresión infija: ')
-root = construct_expression_tree(expression)
+# Función principal
+if __name__ == "__main__":
+    # (a+b*c)+((d*e+f)*g)
+    # Ingresar expresión desde consola
+    expression = input('Ingresar una expresión infija: ')
+    # Se construye el arból y se guarda la raíz
+    root = construct_expression_tree(expression)
 
-# Mostrar el árbol en orden
-G = nx.Graph()
-node_id_map = {}
-buildGraph(G, root, node_id_map)
-pos = hierarchy_pos(G, id(root))
-labels = {node_id: node_value for node_id, node_value in node_id_map.items()}  # Etiquetas
-nx.draw(G, pos, labels=labels, with_labels=True, node_size=2000, node_color="lightgrey", font_size=10, font_weight="bold", edge_color="black")
-plt.show()
-
-print_tree(root)
+    # Mostrar el árbol graficamente
+    G = nx.Graph()
+    node_id_map = {}
+    buildGraph(G, root, node_id_map)
+    pos = hierarchy_pos(G, id(root))
+    labels = {node_id: node_value for node_id, node_value in node_id_map.items()}  # Etiquetas
+    nx.draw(G, pos, labels=labels, with_labels=True, node_size=2000, node_color="lightgrey", font_size=10, font_weight="bold", edge_color="black")
+    plt.show()
