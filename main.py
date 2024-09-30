@@ -1,5 +1,7 @@
 import networkx as nx
 import matplotlib.pyplot as plt
+import tkinter as tk
+from tkinter import simpledialog, messagebox
 
 # Crear clase para estructurar el árbol
 class Node:
@@ -111,11 +113,38 @@ def hierarchy_pos(graph, root, width=1., vert_gap=0.2, vert_loc=0, xcenter=0.5, 
         pos[root] = (xcenter, vert_loc)
     return pos
 
+def notacionPolaca(nodo):
+    if nodo is None:
+        return ""
+    result = str(nodo.value)
+    left = notacionPolaca(nodo.left)
+    right = notacionPolaca(nodo.right)
+    return result + (f" {left}" if left else "") + (f" {right}" if right else "")
+
+def inorder(nodo):
+    if nodo is None:
+        return ""
+    left = inorder(nodo.left)
+    result = str(nodo.value)
+    right = inorder(nodo.right)
+    return (f"{left} " if left else "") + result + (f" {right}" if right else "")
+
+def posorder(nodo):
+    if nodo is None:
+        return ""
+    left = posorder(nodo.left)
+    right = posorder(nodo.right)
+    result = str(nodo.value)
+    return (f"{left} " if left else "") + (f"{right} " if right else "") + result
+
 # Función principal
 if __name__ == "__main__":
     # (a+b*c)+((d*e+f)*g)
-    # Ingresar expresión desde consola
-    expression = input('Ingresar una expresión infija: ')
+    # 5*4+3*2-1
+    tknroot = tk.Tk()
+    tknroot.withdraw()
+    # Ingresar expresión desde dialogo de texto
+    expression = simpledialog.askstring(title='Expresión', prompt='Introducir una expresión')
     # Se construye el arból y se guarda la raíz
     root = construct_expression_tree(expression)
 
@@ -127,3 +156,7 @@ if __name__ == "__main__":
     labels = {node_id: node_value for node_id, node_value in node_id_map.items()}  # Etiquetas
     nx.draw(G, pos, labels=labels, with_labels=True, node_size=2000, node_color="lightgrey", font_size=10, font_weight="bold", edge_color="black")
     plt.show()
+    # Generar mensaje
+    mensaje = f'Notación polaca:\n{notacionPolaca(root)}\nRecorrido inorden:\n{inorder(root)}\nRecorrido posorden:\n{posorder(root)}'
+    # Mostrar resultado
+    messagebox.showinfo("Notación polaca", mensaje)
