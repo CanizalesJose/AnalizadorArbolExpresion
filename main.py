@@ -159,4 +159,4 @@ if __name__ == "__main__":
     # Generar mensaje
     mensaje = f'Notación polaca:\n{notacionPolaca(root)}\nRecorrido inorden:\n{inorder(root)}\nRecorrido posorden:\n{posorder(root)}'
     # Mostrar resultado
-    messagebox.showinfo("Notación polaca", mensaje)
+    messagebox.showinfo("Recorridos", mensaje)
