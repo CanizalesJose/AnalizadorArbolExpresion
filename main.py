@@ -137,14 +137,122 @@ def posorder(nodo):
     result = str(nodo.value)
     return (f"{left} " if left else "") + (f"{right} " if right else "") + result
 
+def isNumber(value):
+    try:
+        float(value)
+        return True
+    except ValueError:
+        return False
+
+def validateValues(expression):
+    for element in expression:
+        if element not in ['-', '+', '/', '*', '^'] and not isNumber(element):
+            messagebox.showwarning('Error', f'La expresión {expression} incluye variables, por lo que no se puede generar código ensambalor a partir de ella')
+            return;
+    return generateCode(expression);
+
+def generateCode(expression):
+    stack = []
+    code = []
+    temp_var_counter = 0
+
+    # Generar el bloque .data
+    code.append(".model small")
+    code.append(".stack 100h")
+    code.append(".data")
+    
+    # Función para crear nuevas variables temporales
+    def new_temp_var():
+        nonlocal temp_var_counter
+        var_name = f"TEMP{temp_var_counter} DW ?"
+        temp_var_counter += 1
+        return var_name
+
+    # Crear variables temporales para cada número en la expresión
+    for _ in expression:
+        code.append(new_temp_var())
+
+    code.append(".code")
+    code.append("main proc")
+
+    # Reiniciar el contador de variables temporales para su uso
+    temp_var_counter = 0
+
+    for token in expression:
+        if token.isdigit():
+            # Si es un número, guardarlo en la última variable temporal disponible
+            temp_var = f"TEMP{temp_var_counter}"
+            code.append(f'MOV {temp_var}, {token}')
+            stack.append(temp_var)
+            temp_var_counter += 1
+        else:
+            # Si es un operador, sacar los dos últimos operandos
+            if len(stack) >= 2:
+                reg2 = stack.pop()
+                reg1 = stack.pop()
+                
+                temp_var = f"TEMP{temp_var_counter}"
+                temp_var_counter += 1
+
+                if token == '+':
+                    code.append(f'MOV AX, {reg1}')
+                    code.append(f'ADD AX, {reg2}')
+                    code.append(f'MOV {temp_var}, AX')
+
+                elif token == '-':
+                    code.append(f'MOV AX, {reg1}')
+                    code.append(f'SUB AX, {reg2}')
+                    code.append(f'MOV {temp_var}, AX')
+
+                elif token == '*':
+                    code.append(f'MOV AX, {reg1}')
+                    code.append(f'IMUL {reg2}')
+                    code.append(f'MOV {temp_var}, AX')
+
+                elif token == '/':
+                    code.append(f'MOV AX, {reg1}')
+                    code.append(f'IDIV {reg2}')
+                    code.append(f'MOV {temp_var}, AX')
+
+                # Guardar el resultado temporal en el stack
+                stack.append(temp_var)
+
+    code.append('''
+MOV BX, 10
+XOR CX, CX
+CONVERT:
+    XOR DX, DX
+    DIV BX
+    ADD DL, '0'
+    PUSH DX
+    INC CX
+    TEST AX, AX
+    JNZ CONVERT
+
+PRINT_DIGITS:
+    POP DX
+    MOV AH, 02h
+    INT 21h
+    LOOP PRINT_DIGITS
+
+    MOV AH, 4Ch
+    INT 21h''')
+    
+    code.append("main endp")
+    code.append("end main")
+    
+    return code
+
+
 # Función principal
 if __name__ == "__main__":
-    # (a+b*c)+((d*e+f)*g)
-    # 5*4+3*2-1
     tknroot = tk.Tk()
     tknroot.withdraw()
     # Ingresar expresión desde dialogo de texto
     expression = simpledialog.askstring(title='Expresión', prompt='Introducir una expresión')
+    if expression == '':
+        messagebox.showinfo('Error', 'No se ha proporcionado una expresión')
+        exit(0)
     # Se construye el arból y se guarda la raíz
     root = construct_expression_tree(expression)
 
@@ -156,7 +264,20 @@ if __name__ == "__main__":
     labels = {node_id: node_value for node_id, node_value in node_id_map.items()}  # Etiquetas
     nx.draw(G, pos, labels=labels, with_labels=True, node_size=2000, node_color="lightgrey", font_size=10, font_weight="bold", edge_color="black")
     plt.show()
+
     # Generar mensaje
     mensaje = f'Notación polaca:\n{notacionPolaca(root)}\nRecorrido inorden:\n{inorder(root)}\nRecorrido posorden:\n{posorder(root)}'
     # Mostrar resultado
     messagebox.showinfo("Recorridos", mensaje)
+    code = ''
+    for line in validateValues(posorder(root).split()):
+        code += line+'\n'
+    # Generar NEWCODE.asm
+    with open('C:/dos/masm/NEWCODE.asm', 'w') as f:
+        f.write(code)
+    messagebox.showinfo('Código Generado', 'El código ha sido generado y guardado en C:/dos/masm/NEWCODE.asm')
+    # Pruebas
+    # (a+b*c)+((d*e+f)*g)
+    # 5*4+3*2-1
+    # (6+2)*(5-3)
+    # 7*(4+3)-2
