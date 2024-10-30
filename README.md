@@ -13,12 +13,13 @@ En la función principal se pide por consola una expresión que puede contener n
 - `(a+b*c)+((d*e+f)*g)`
 - `5*4+3*2-1`
 
+### Actualizaciones
+Se ha agregado una interfaz gráfica para ingresar los datos y se muestran dichos resultados en un cuadro de dialogo. Además, se genera un código ensamblador en la dirección `C:/dos/masm/newcode.asm`.
+
 ### Requisitos
 Para ejecutar el programa se debe tener instalado:
-- `Python 3.x`
-- `pip 20.x` en adelante
-- Librería `NetworkX`
-- Librería `Matplotlib`
+- `Python 3.8`
+- `pip 24.1.1`
 
 Para ejecutar, se debe ingresar a la carpeta donde esta instalado y usar el interprete de python con el comando
 `py ./main.py`
